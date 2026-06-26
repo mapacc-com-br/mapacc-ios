@@ -3,19 +3,31 @@ workflows:
     name: MapaCC iOS
     max_build_duration: 60
     instance_type: mac_mini_m2
+
     environment:
       xcode: 16.3
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: br.com.mapacc.app
+
     scripts:
       - name: Install pods
         script: |
           cd src
           pod install
-      - name: Build iOS app
+
+      - name: Set up code signing
         script: |
           cd src
-          xcodebuild build \
-            -workspace MapaCC.xcworkspace \
-            -scheme MapaCC \
-            -configuration Debug \
-            -sdk iphonesimulator
+          xcode-project use-profiles
+
+      - name: Build IPA
+        script: |
+          cd src
+          xcode-project build-ipa \
+            --workspace MapaCC.xcworkspace \
+            --scheme MapaCC
+
+    artifacts:
+      - src/build/ios/ipa/*.ipa
