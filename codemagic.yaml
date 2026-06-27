@@ -147,8 +147,3 @@ workflows:
     artifacts:
       - src/build/ios/ipa/*.ipa
       - src/build/ios/xcarchive/*.xcarchive
-
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
