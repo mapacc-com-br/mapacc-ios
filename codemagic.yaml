@@ -22,10 +22,7 @@ workflows:
           cd src
           xcode-project use-profiles
 
-
-
-
-      - name: Build IPA
+      - name: Build IPA verbose
         script: |
           cd src
           set -o pipefail
@@ -40,7 +37,7 @@ workflows:
             PROVISIONING_PROFILE_SPECIFIER="MapaCC App Store" \
             | tee xcodebuild.log
 
-        artifacts:
+    artifacts:
       - src/xcodebuild.log
       - src/build/ios/xcarchive/*.xcarchive
       - src/build/ios/ipa/*.ipa
