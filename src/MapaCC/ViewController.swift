@@ -20,13 +20,14 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
     @IBOutlet weak var webviewView: UIView!
     var toolbarView: UIToolbar!
     
-    var htmlIsLoaded = false;
+    var htmlIsLoaded = false
     private var loadingMode = LoadingMode.defaultCachePolicy
     
     private var themeObservation: NSKeyValueObservation?
     var currentWebViewTheme: UIUserInterfaceStyle = .unspecified
+
     override var preferredStatusBarStyle : UIStatusBarStyle {
-        if #available(iOS 13, *), overrideStatusBar{
+        if #available(iOS 13, *), overrideStatusBar {
             if #available(iOS 15, *) {
                 return .default
             } else {
@@ -42,8 +43,12 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
         initToolbarView()
         loadRootUrl()
     
-        NotificationCenter.default.addObserver(self, selector: #selector(self.keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification , object: nil)
-        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(self.keyboardWillHide(_:)),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
     }
 
     override func viewDidLayoutSubviews() {
@@ -57,13 +62,18 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
     
     func initWebView() {
         MapaCC.webView = createWebView(container: webviewView, WKSMH: self, WKND: self, NSO: self, VC: self)
-        webviewView.addSubview(MapaCC.webView);
+        webviewView.addSubview(MapaCC.webView)
         
-        MapaCC.webView.uiDelegate = self;
+        MapaCC.webView.uiDelegate = self
         
-        MapaCC.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
+        MapaCC.webView.addObserver(
+            self,
+            forKeyPath: #keyPath(WKWebView.estimatedProgress),
+            options: .new,
+            context: nil
+        )
 
-        if(pullToRefresh){
+        if pullToRefresh {
             let refreshControl = UIRefreshControl()
             refreshControl.addTarget(self, action: #selector(refreshWebView(_:)), for: UIControl.Event.valueChanged)
             MapaCC.webView.scrollView.addSubview(refreshControl)
@@ -72,39 +82,43 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
 
         if #available(iOS 15.0, *), adaptiveUIStyle {
             themeObservation = MapaCC.webView.observe(\.themeColor) { [unowned self] webView, _ in
-                let backgroundColor = MapaCC.webView.underPageBackgroundColor;
-                let themeColor = MapaCC.webView.themeColor;
+                let backgroundColor = MapaCC.webView.underPageBackgroundColor
+                let themeColor = MapaCC.webView.themeColor
                 currentWebViewTheme = themeColor?.isLight() ?? backgroundColor?.isLight() ?? true ? .light : .dark
                 self.overrideUIStyle()
-                view.backgroundColor = themeColor ?? backgroundColor;
+                view.backgroundColor = themeColor ?? backgroundColor
             }
         }
     }
 
     @objc func refreshWebView(_ sender: UIRefreshControl) {
-        MapaCC.webView?.reload()
+        MapaCC.webView?.reloadFromOrigin()
         sender.endRefreshing()
     }
 
-    func createToolbarView() -> UIToolbar{
+    func createToolbarView() -> UIToolbar {
         let winScene = UIApplication.shared.connectedScenes.first
         let windowScene = winScene as! UIWindowScene
         var statusBarHeight = windowScene.statusBarManager?.statusBarFrame.height ?? 60
         
         #if targetEnvironment(macCatalyst)
-        if (statusBarHeight == 0){
+        if statusBarHeight == 0 {
             statusBarHeight = 30
         }
         #endif
         
         let toolbarView = UIToolbar(frame: CGRect(x: 0, y: 0, width: webviewView.frame.width, height: 0))
         toolbarView.sizeToFit()
-        toolbarView.frame = CGRect(x: 0, y: 0, width: webviewView.frame.width, height: toolbarView.frame.height + statusBarHeight)
-//        toolbarView.autoresizingMask = [.flexibleTopMargin, .flexibleRightMargin, .flexibleWidth]
+        toolbarView.frame = CGRect(
+            x: 0,
+            y: 0,
+            width: webviewView.frame.width,
+            height: toolbarView.frame.height + statusBarHeight
+        )
         
         let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         let close = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(loadRootUrl))
-        toolbarView.setItems([close,flex], animated: true)
+        toolbarView.setItems([close, flex], animated: true)
         
         toolbarView.isHidden = true
         
@@ -118,36 +132,41 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
                     .shared
                     .connectedScenes
                     .flatMap { ($0 as? UIWindowScene)?.windows ?? [] }
-                    .first { $0.isKeyWindow }?.overrideUserInterfaceStyle = toDefault ? .unspecified : self.currentWebViewTheme;
+                    .first { $0.isKeyWindow }?.overrideUserInterfaceStyle = toDefault ? .unspecified : self.currentWebViewTheme
             }
         }
     }
     
     func initToolbarView() {
-        toolbarView =  createToolbarView()
-        
+        toolbarView = createToolbarView()
         webviewView.addSubview(toolbarView)
     }
     
-    @objc func loadRootUrl(cachePolicy: NSURLRequest.CachePolicy = .useProtocolCachePolicy) {
-        MapaCC.webView.load(URLRequest(url: SceneDelegate.universalLinkToLaunch ?? SceneDelegate.shortcutLinkToLaunch ?? rootUrl, cachePolicy: cachePolicy))
+    @objc func loadRootUrl(cachePolicy: NSURLRequest.CachePolicy = .reloadIgnoringLocalAndRemoteCacheData) {
+        let request = URLRequest(
+            url: SceneDelegate.universalLinkToLaunch ?? SceneDelegate.shortcutLinkToLaunch ?? rootUrl,
+            cachePolicy: cachePolicy,
+            timeoutInterval: 30
+        )
+
+        MapaCC.webView.load(request)
     }
     
     func reloadWebview(
         loadingMode: LoadingMode = LoadingMode.defaultCachePolicy
     ) {
         switch loadingMode {
-        case LoadingMode.defaultCachePolicy:
-            loadRootUrl(cachePolicy: .useProtocolCachePolicy);
+        case .defaultCachePolicy:
+            loadRootUrl(cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
 
-        case LoadingMode.forceCache:
-            loadRootUrl(cachePolicy: .useProtocolCachePolicy);
+        case .forceCache:
+            loadRootUrl(cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
         }
 
         self.loadingMode = loadingMode
     }
     
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!){
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         htmlIsLoaded = true
         
         self.setProgress(1.0, true)
@@ -164,25 +183,25 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        htmlIsLoaded = false;
+        htmlIsLoaded = false
         
         if (error as NSError)._code == (-999) { return }
         if (error as NSError)._code == 102 { return }
         
-        self.overrideUIStyle(toDefault: true);
-        webView.isHidden = true;
-        loadingView.isHidden = false;
+        self.overrideUIStyle(toDefault: true)
+        webView.isHidden = true
+        loadingView.isHidden = false
 
         if loadingMode == LoadingMode.defaultCachePolicy {
             DispatchQueue.main.async {
                 self.reloadWebview(loadingMode: LoadingMode.forceCache)
             }
         } else {
-            animateConnectionProblem(true);
-            setProgress(0.05, true);
+            animateConnectionProblem(true)
+            setProgress(0.05, true)
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                self.setProgress(0.1, true);
+                self.setProgress(0.1, true)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                     self.reloadWebview()
                 }
@@ -190,40 +209,43 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
         }
     }
     
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+    override func observeValue(
+        forKeyPath keyPath: String?,
+        of object: Any?,
+        change: [NSKeyValueChangeKey : Any]?,
+        context: UnsafeMutableRawPointer?
+    ) {
+        if keyPath == #keyPath(WKWebView.estimatedProgress) &&
+            MapaCC.webView.isLoading &&
+            !self.loadingView.isHidden &&
+            !self.htmlIsLoaded {
 
-        if (keyPath == #keyPath(WKWebView.estimatedProgress) &&
-                MapaCC.webView.isLoading &&
-                !self.loadingView.isHidden &&
-                !self.htmlIsLoaded) {
-                    var progress = Float(MapaCC.webView.estimatedProgress);
-                    
-                    if (progress >= 0.8) { progress = 1.0; };
-                    if (progress >= 0.3) { self.animateConnectionProblem(false); }
-                    
-                    self.setProgress(progress, true);
+            var progress = Float(MapaCC.webView.estimatedProgress)
+            
+            if progress >= 0.8 { progress = 1.0 }
+            if progress >= 0.3 { self.animateConnectionProblem(false) }
+            
+            self.setProgress(progress, true)
         }
     }
     
     func setProgress(_ progress: Float, _ animated: Bool) {
-        self.progressView.setProgress(progress, animated: animated);
+        self.progressView.setProgress(progress, animated: animated)
     }
     
-    
     func animateConnectionProblem(_ show: Bool) {
-        if (show) {
-            self.connectionProblemView.isHidden = false;
+        if show {
+            self.connectionProblemView.isHidden = false
             self.connectionProblemView.alpha = 0
             UIView.animate(withDuration: 0.7, delay: 0, options: [.repeat, .autoreverse], animations: {
                 self.connectionProblemView.alpha = 1
             })
-        }
-        else {
+        } else {
             UIView.animate(withDuration: 0.3, delay: 0, options: [], animations: {
-                self.connectionProblemView.alpha = 0 // Here you will get the animation you want
+                self.connectionProblemView.alpha = 0
             }, completion: { _ in
-                self.connectionProblemView.isHidden = true;
-                self.connectionProblemView.layer.removeAllAnimations();
+                self.connectionProblemView.isHidden = true
+                self.connectionProblemView.layer.removeAllAnimations()
             })
         }
     }
@@ -234,43 +256,48 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
 }
 
 extension UIColor {
-    // Check if the color is light or dark, as defined by the injected lightness threshold.
-    // Some people report that 0.7 is best. I suggest to find out for yourself.
-    // A nil value is returned if the lightness couldn't be determined.
     func isLight(threshold: Float = 0.5) -> Bool? {
         let originalCGColor = self.cgColor
 
-        // Now we need to convert it to the RGB colorspace. UIColor.white / UIColor.black are greyscale and not RGB.
-        // If you don't do this then you will crash when accessing components index 2 below when evaluating greyscale colors.
-        let RGBCGColor = originalCGColor.converted(to: CGColorSpaceCreateDeviceRGB(), intent: .defaultIntent, options: nil)
+        let RGBCGColor = originalCGColor.converted(
+            to: CGColorSpaceCreateDeviceRGB(),
+            intent: .defaultIntent,
+            options: nil
+        )
+
         guard let components = RGBCGColor?.components else {
             return nil
         }
+
         guard components.count >= 3 else {
             return nil
         }
 
         let brightness = Float(((components[0] * 299) + (components[1] * 587) + (components[2] * 114)) / 1000)
-        return (brightness > threshold)
+        return brightness > threshold
     }
 }
 
 extension ViewController: WKScriptMessageHandler {
-  func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         if message.name == "print" {
             printView(webView: MapaCC.webView)
         }
+
         if message.name == "push-subscribe" {
             handleSubscribeTouch(message: message)
         }
+
         if message.name == "push-permission-request" {
             handlePushPermission()
         }
+
         if message.name == "push-permission-state" {
             handlePushState()
         }
+
         if message.name == "push-token" {
             handleFCMToken()
         }
-  }
+    }
 }
