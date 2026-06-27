@@ -22,6 +22,8 @@ workflows:
           cd src
           xcode-project use-profiles
 
+
+
       - name: Build IPA verbose
         script: |
           cd src
@@ -30,6 +32,8 @@ workflows:
             -workspace MapaCC.xcworkspace \
             -scheme MapaCC \
             -configuration Release \
+            -destination "generic/platform=iOS" \
+            -sdk iphoneos \
             -archivePath build/ios/xcarchive/MapaCC.xcarchive \
             DEVELOPMENT_TEAM=6TQTTMXW8H \
             CODE_SIGN_STYLE=Manual \
