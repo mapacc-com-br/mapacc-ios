@@ -72,3 +72,8 @@ workflows:
     artifacts:
       - src/build/ios/ipa/*.ipa
       - src/build/ios/xcarchive/*.xcarchive
+
+    publishing:
+      app_store_connect:
+        api_key: Codemagic
+        submit_to_testflight: true
