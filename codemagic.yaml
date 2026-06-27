@@ -22,12 +22,52 @@ workflows:
           cd src
           xcode-project use-profiles
 
-      - name: Build IPA
+      - name: Create exportOptions.plist
         script: |
           cd src
-          xcode-project build-ipa \
-            --workspace MapaCC.xcworkspace \
-            --scheme MapaCC
+          cat > exportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>6TQTTMXW8H</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>br.com.mapacc.app</key>
+              <string>MapaCC App Store</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Archive iOS app
+        script: |
+          cd src
+          xcodebuild archive \
+            -workspace MapaCC.xcworkspace \
+            -scheme MapaCC \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -sdk iphoneos \
+            -archivePath build/ios/xcarchive/MapaCC.xcarchive \
+            DEVELOPMENT_TEAM=6TQTTMXW8H \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="MapaCC App Store"
+
+      - name: Export IPA
+        script: |
+          cd src
+          mkdir -p build/ios/ipa
+          xcodebuild -exportArchive \
+            -archivePath build/ios/xcarchive/MapaCC.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist exportOptions.plist
 
     artifacts:
       - src/build/ios/ipa/*.ipa
